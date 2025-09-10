@@ -18,13 +18,15 @@
   },
   "main": "lib/iugu.js",
   "devDependencies": {
-    "mocha": "~1.13.0",
     "chai": "~1.8.0",
     "chai-as-promised": "~4.0.0",
-    "mocha-as-promised": "~1.4.0"
+    "mocha": "^11.7.2",
+    "mocha-as-promised": "^1.2.1"
   },
   "dependencies": {
-    "when": "~3.1.0"
+    "iugu": "^0.0.6",
+    "when": "~3.1.0",
+    "dotenv": "^16.0.0"
   },
   "scripts": {
     "test": "mocha"
