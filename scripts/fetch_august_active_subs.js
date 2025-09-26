@@ -9,8 +9,8 @@ if (!IUGU_API_TOKEN) {
 }
 
 const BASIC_AUTH = 'Basic ' + Buffer.from(IUGU_API_TOKEN + ':').toString('base64');
-const AUG_START = new Date('2025-08-01T00:00:00Z');
-const AUG_END = new Date('2025-08-31T23:59:59Z');
+const SEP_START = new Date('2025-09-01T00:00:00Z');
+const SEP_END = new Date('2025-09-30T23:59:59Z');
 
 async function fetchInvoicesPage(page = 1) {
   const url = `${IUGU_API_BASE_URL}/invoices?page=${page}&per_page=100`;
@@ -22,8 +22,10 @@ async function fetchInvoicesPage(page = 1) {
         const text = await res.text();
         if (res.status >= 500 && attempt < maxAttempts) {
           const waitMs = Math.min(5000, Math.pow(2, attempt) * 300);
-          console.warn(`invoices fetch page ${page} failed (${res.status}), retrying in ${waitMs}ms (attempt ${attempt})`);
-          await new Promise(r => setTimeout(r, waitMs));
+          console.warn(
+            `invoices fetch page ${page} failed (${res.status}), retrying in ${waitMs}ms (attempt ${attempt})`
+          );
+          await new Promise((r) => setTimeout(r, waitMs));
           continue;
         }
         throw new Error(`invoices fetch failed (${res.status}): ${text}`);
@@ -38,11 +40,17 @@ async function fetchInvoicesPage(page = 1) {
       // network or other errors: retry with backoff
       if (attempt < maxAttempts) {
         const waitMs = Math.min(5000, Math.pow(2, attempt) * 300);
-        console.warn(`invoices fetch page ${page} error, retrying in ${waitMs}ms (attempt ${attempt}):`, err.message || err);
-        await new Promise(r => setTimeout(r, waitMs));
+        console.warn(
+          `invoices fetch page ${page} error, retrying in ${waitMs}ms (attempt ${attempt}):`,
+          err.message || err
+        );
+        await new Promise((r) => setTimeout(r, waitMs));
         continue;
       }
-      console.error(`invoices fetch page ${page} failed after ${maxAttempts} attempts:`, err.message || err);
+      console.error(
+        `invoices fetch page ${page} failed after ${maxAttempts} attempts:`,
+        err.message || err
+      );
       // return empty array to skip page and continue
       return [];
     }
@@ -50,12 +58,12 @@ async function fetchInvoicesPage(page = 1) {
   return [];
 }
 
-function invoicePaidInAugust(inv) {
+function invoicePaidInSeptember(inv) {
   if (!inv) return false;
   const paidAt = inv.paid_at || inv.paid_at_at || inv.paid_at_time || null;
   if (!paidAt) return false;
   const d = new Date(paidAt);
-  return d >= AUG_START && d <= AUG_END;
+  return d >= SEP_START && d <= SEP_END;
 }
 
 async function fetchSubscription(id) {
@@ -68,7 +76,7 @@ async function fetchSubscription(id) {
         console.warn(`subscription fetch ${id} failed (${res.status}): ${text}`);
         if (res.status >= 500) {
           // retry
-          await new Promise(r => setTimeout(r, attempt * 500));
+          await new Promise((r) => setTimeout(r, attempt * 500));
           continue;
         }
         return null;
@@ -76,14 +84,14 @@ async function fetchSubscription(id) {
       return await res.json();
     } catch (err) {
       console.warn('subscription fetch error', err.message || err);
-      await new Promise(r => setTimeout(r, attempt * 500));
+      await new Promise((r) => setTimeout(r, attempt * 500));
     }
   }
   return null;
 }
 
 async function main() {
-  console.log('Fetching invoices from Iugu and filtering paid in August 2025...');
+  console.log('Fetching invoices from Iugu and filtering paid in September 2025...');
   const subscriptionIds = new Set();
   let page = 1;
   const MAX_PAGES = parseInt(process.env.MAX_PAGES || '5000', 10);
@@ -91,9 +99,11 @@ async function main() {
   // detect existing checkpoint pages to resume
   try {
     const fs = await import('node:fs');
-    const files = fs.readdirSync('out').filter(f => f.startsWith('page_') && f.endsWith('.json'));
+    const files = fs.readdirSync('out').filter((f) => f.startsWith('page_') && f.endsWith('.json'));
     if (files.length > 0 && !process.env.START_PAGE) {
-      const nums = files.map(f => parseInt(f.replace('page_','').replace('.json',''),10)).filter(n => !isNaN(n));
+      const nums = files
+        .map((f) => parseInt(f.replace('page_', '').replace('.json', ''), 10))
+        .filter((n) => !isNaN(n));
       if (nums.length > 0) {
         const max = Math.max(...nums);
         page = Math.max(page, max + 1);
@@ -109,20 +119,44 @@ async function main() {
     const invoices = await fetchInvoicesPage(page);
     if (!invoices || invoices.length === 0) break;
     for (const inv of invoices) {
-      if (invoicePaidInAugust(inv)) {
+      if (invoicePaidInSeptember(inv)) {
         const sid = inv.subscription_id || (inv.subscription && inv.subscription.id) || null;
         if (sid) subscriptionIds.add(sid);
       }
     }
     pagesFetched++;
     console.log(`fetched page ${page} (${invoices.length} invoices)`);
-    // save checkpoint page
+    // save checkpoint page locally
     try {
       const fs = await import('node:fs');
       if (!fs.existsSync('out')) fs.mkdirSync('out');
       fs.writeFileSync(`out/page_${page}.json`, JSON.stringify(invoices));
     } catch (err) {
       console.warn('failed to write checkpoint', err.message || err);
+    }
+
+    // also insert batch into Supabase staging via RPC (if SUPABASE env set)
+    try {
+      const SUPABASE_URL = process.env.SUPABASE_URL;
+      const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+        await fetch(`${SUPABASE_URL}/rest/v1/rpc/insert_iugu_batch`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({ p_page: page, p_payload: invoices }),
+        }).then(async (r) => {
+          if (!r.ok) {
+            const t = await r.text();
+            console.warn('supabase insert_iugu_batch failed', r.status, t);
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('supabase batch insert error', err.message || err);
     }
     if (invoices.length < 100) break;
     if (pagesFetched >= MAX_PAGES) {
@@ -131,33 +165,41 @@ async function main() {
     }
     page++;
     // polite pause to avoid overwhelming the API
-    await new Promise(r => setTimeout(r, PAUSE_MS));
+    await new Promise((r) => setTimeout(r, PAUSE_MS));
   }
 
-  console.log('unique subscription ids with paid invoices in August:', subscriptionIds.size);
+  console.log('unique subscription ids with paid invoices in September:', subscriptionIds.size);
 
   let activeCount = 0;
   const details = [];
   for (const sid of subscriptionIds) {
     const sub = await fetchSubscription(sid);
     const status = sub && sub.status ? String(sub.status).toLowerCase() : null;
-    const isActive = status === 'active' || status === 'ativo' || status === 'activated';
+    const suspended = sub && sub.suspended === true;
+    // Consider active if not suspended, or if status explicitly indicates active
+    const isActive =
+      !suspended || status === 'active' || status === 'ativo' || status === 'activated';
     if (isActive) activeCount++;
-    details.push({ id: sid, status: status, raw: sub });
+    details.push({ id: sid, status: status, suspended: suspended, isActive: isActive, raw: sub });
   }
 
-  const result = { month: '2025-08', total_subscriptions_with_paid_invoices: subscriptionIds.size, active_subscriptions_with_paid_invoices: activeCount };
+  const result = {
+    month: '2025-09',
+    total_subscriptions_with_paid_invoices: subscriptionIds.size,
+    active_subscriptions_with_paid_invoices: activeCount,
+  };
   console.log(JSON.stringify(result, null, 2));
   // write details to file for inspection
   const fs = await import('node:fs');
   try {
-    fs.writeFileSync('out/active_subs_august_details.json', JSON.stringify(details, null, 2));
-    console.log('Details written to out/active_subs_august_details.json');
+    fs.writeFileSync('out/active_subs_september_details.json', JSON.stringify(details, null, 2));
+    console.log('Details written to out/active_subs_september_details.json');
   } catch (err) {
     // ignore
   }
 }
 
-main().catch(err => { console.error('Error:', err.message || err); process.exit(1); });
-
-
+main().catch((err) => {
+  console.error('Error:', err.message || err);
+  process.exit(1);
+});

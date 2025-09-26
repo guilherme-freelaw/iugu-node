@@ -1,0 +1,74 @@
+[
+  {
+    "timestamp": "2025-09-11T17:06:07.884Z",
+    "database": {
+      "totalInvoices": 17958,
+      "totalCustomers": 1834,
+      "recentInvoices": 13,
+      "status": "online"
+    },
+    "sync": {
+      "status": "unknown",
+      "error": "Checkpoint file not found"
+    },
+    "tests": {
+      "lastRun": "2025-09-11T17:05:52.472Z",
+      "hoursAgo": "0.0",
+      "summary": {
+        "total": 10,
+        "passed": 0,
+        "failed": 0,
+        "warnings": 0,
+        "pass": null,
+        "warn": null,
+        "fail": null
+      },
+      "successRate": "0.0",
+      "status": "passing"
+    },
+    "alerts": [
+      {
+        "type": "error",
+        "message": "Arquivo de checkpoint da sincronização não encontrado",
+        "severity": "high"
+      }
+    ]
+  },
+  {
+    "timestamp": "2025-09-11T18:05:07.560Z",
+    "database": {
+      "totalInvoices": 17958,
+      "totalCustomers": 1834,
+      "recentInvoices": 10,
+      "status": "online"
+    },
+    "sync": {
+      "lastSync": "2025-09-11T17:06:21.165Z",
+      "hoursSinceSync": "1.0",
+      "totalSynced": 0,
+      "lastRun": {
+        "timestamp": "2025-09-11T17:06:21.165Z",
+        "invoices": 0,
+        "customers": 0,
+        "subscriptions": 0
+      },
+      "status": "healthy"
+    },
+    "tests": {
+      "lastRun": "2025-09-11T17:05:52.472Z",
+      "hoursAgo": "1.0",
+      "summary": {
+        "total": 10,
+        "passed": 0,
+        "failed": 0,
+        "warnings": 0,
+        "pass": null,
+        "warn": null,
+        "fail": null
+      },
+      "successRate": "0.0",
+      "status": "passing"
+    },
+    "alerts": []
+  }
+]

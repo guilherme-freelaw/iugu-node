@@ -1,0 +1,33 @@
+name: Sync Iugu Account Balances
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: npm ci --no-fund --no-audit
+
+      - name: Run sync
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          IUGU_API_TOKEN: ${{ secrets.IUGU_API_TOKEN }}
+          IUGU_API_KEY: ${{ secrets.IUGU_API_KEY }}
+          IUGU_API_BASE_URL: ${{ secrets.IUGU_API_BASE_URL }}
+          IUGU_ACCOUNT_ID: ${{ secrets.IUGU_ACCOUNT_ID }}
+        run: npm run sync:balances
+
+

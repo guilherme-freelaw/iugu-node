@@ -1,0 +1,7 @@
+node_modules
+out
+logs
+tmp
+supabase/migrations
+docs/reports
+

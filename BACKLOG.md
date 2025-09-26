@@ -94,9 +94,22 @@ Observação: o projeto Supabase já existe; quando for a hora de testar/deploy,
 - Adicionados testes de integração em `test/integration/` cobrindo os fluxos acima.
 - Scripts de dev/test adicionados em `supabase/dev_test/` para validação manual.
 
-Próximo foco:
+**Status atual (Janeiro 2025):**
 
-- `todo-edge-webhooks`: implementar handler idempotente e notificação ao processor (em progresso, handler aprimorado em `supabase/functions/webhooks/index.ts`).
+✅ **Integração Iugu-Supabase completa**: Projeto `hewtomsegvpccldrcqjo` configurado, migrações 001-011 aplicadas, RPCs funcionais.
+
+✅ **Sistema de backfill operacional**: Script `fetch_august_active_subs.js` executando backfill completo com checkpointing, inserindo dados em `staging.iugu_batches` via `insert_iugu_batch` RPC.
+
+✅ **Edge Functions implementadas**: Webhook handler (`supabase/functions/webhooks/index.ts`) e processor (`supabase/functions/processor/index.ts`) funcionais com validação de assinatura e normalização de dados.
+
+✅ **Testes de integração**: Cobertura completa em `test/integration/` para todos os normalizers (customers, subscriptions, invoices, invoice_items, payment_methods, plans, transfers).
+
+🔄 **Em andamento**: Backfill executando em background (páginas 811+) com PAUSE_MS=1500ms, coletando faturas de agosto 2025 para análise de assinaturas ativas.
+
+**Próximo foco:**
+- Monitorar conclusão do backfill e processar batches em `staging` para popular tabelas `public.iugu_*`
+- Implementar função periódica (30min) para processamento automático 
+- Gerar relatório final: volume de assinaturas ativas com faturas pagas em agosto
 
 --
 Arquivo atualizado automaticamente pelo time de desenvolvimento (progresso automatizado).

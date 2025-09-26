@@ -1,5 +1,6 @@
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 // @ts-ignore runtime import
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from 'npm:@supabase/supabase-js';
 
 // support Deno or Node env
 const denoEnv = (globalThis as any).Deno;

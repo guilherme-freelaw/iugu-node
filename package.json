@@ -12,23 +12,57 @@
     "type": "git",
     "url": "https://github.com/iugu/iugu-node.git"
   },
-  "bugs:": "https://github.com/iugu/iugu-node/issues",
+  "bugs": "https://github.com/iugu/iugu-node/issues",
   "engines": {
-    "node": ">= v0.8.0"
+    "node": ">=18"
   },
   "main": "lib/iugu.js",
   "devDependencies": {
     "chai": "~1.8.0",
     "chai-as-promised": "~4.0.0",
+    "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-node": "^11.1.0",
     "mocha": "^11.7.2",
-    "mocha-as-promised": "^1.2.1"
+    "mocha-as-promised": "^1.2.1",
+    "prettier": "^3.6.2"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "csv-parse": "^5.6.0",
+    "dotenv": "^16.0.0",
     "iugu": "^0.0.6",
-    "when": "~3.1.0",
-    "dotenv": "^16.0.0"
+    "when": "~3.1.0"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "lint": "eslint lib scripts",
+    "lint:fix": "eslint --fix lib scripts",
+    "format": "prettier --check \"{lib,scripts,test,docs}/**/*.{js,ts,md,json}\"",
+    "format:write": "prettier --write \"{lib,scripts,test,docs}/**/*.{js,ts,md,json}\"",
+    "sync:balances": "node -r dotenv/config scripts/sync_account_balances.js",
+    "validate:kpis": "node -r dotenv/config scripts/validate_kpis.js",
+    "print:revenues": "node -r dotenv/config scripts/print_monthly_revenues.js",
+    "investigate:revenue": "node -r dotenv/config scripts/investigate_revenue_gap.js",
+    "investigate:revenue:v2": "node -r dotenv/config scripts/investigate_revenue_gap_v2.js",
+    "compare:hypotheses": "node -r dotenv/config scripts/compare_revenue_hypotheses.js",
+    "test:competency-transit": "node -r dotenv/config scripts/test_competency_and_transit.js",
+    "analyze:method": "node -r dotenv/config scripts/analyze_competency_by_method.js",
+    "list:due-not-paid": "node -r dotenv/config scripts/list_top_due_not_paid.js",
+    "reconcile:months": "node -r dotenv/config scripts/monthly_reconciliation.js",
+    "backfill:payment-method": "node -r dotenv/config scripts/run_backfill_payment_method.js",
+    "print:hybrid-revenue": "node -r dotenv/config scripts/print_hybrid_revenue.js",
+    "drilldown:current": "node -r dotenv/config scripts/drilldown_month_current.js",
+    "combine:hybrid-receivable": "node -r dotenv/config scripts/add_receivable_delta_to_hybrid.js",
+    "reconcile:csv": "node -r dotenv/config scripts/reconcile_from_csv.js",
+    "csv:sum-methods": "node scripts/csv_sum_methods.js",
+    "compare:api-csv": "node -r dotenv/config scripts/compare_api_vs_csv_by_method.js",
+    "compare:daily": "node -r dotenv/config scripts/compare_daily_api_csv.js",
+    "sample:deltas": "node -r dotenv/config scripts/sample_deltas.js",
+    "print:revenues:12m": "node -r dotenv/config scripts/print_last_12_months_revenues.js",
+    "print:revenues:12m:net": "node -r dotenv/config scripts/print_last_12_complete_months_net_revenue.js",
+    "compute:unpaid:competency:current": "node -r dotenv/config scripts/compute_unpaid_competency_current_month.js",
+    "compute:unpaid:competency:current:by-customer": "node -r dotenv/config scripts/compute_unpaid_competency_current_month_by_customer.js",
+    "realtime:listen": "node -r dotenv/config scripts/realtime_listener.js"
   }
 }

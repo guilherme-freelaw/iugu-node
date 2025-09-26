@@ -7,16 +7,15 @@ var expect = require('chai').expect;
 var CUSTOMER_TEST_ID = 'customerIdTest999';
 
 // Create new CustomerCard instance with pre-filled customerId:
-var customerPaymentMethod = new resources.CustomerPaymentMethods(
-  iugu,
-  { customerId: CUSTOMER_TEST_ID }
-);
+var customerPaymentMethod = new resources.CustomerPaymentMethods(iugu, {
+  customerId: CUSTOMER_TEST_ID,
+});
 
 // Use spy from existing resource:
 customerPaymentMethod._request = iugu.customers._request;
 
-describe('CustomerPaymentMethod Resource', function() {
-/*
+describe('CustomerPaymentMethod Resource', function () {
+  /*
   describe('retrieve', function() {
 
     it('Sends the correct request', function() {

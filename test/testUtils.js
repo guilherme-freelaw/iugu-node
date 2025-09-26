@@ -3,20 +3,18 @@
 // NOTE: testUtils should be require'd before anything else in each spec file!
 
 // Ensure we are using the 'as promised' libs before any tests are run:
-require('mocha-as-promised')();
 require('chai').use(require('chai-as-promised'));
 
 var when = require('when');
 
-var utils = module.exports = {
-
-  getUserIuguKey: function() {
+var utils = (module.exports = {
+  getUserIuguKey: function () {
     var key = process.env.IUGU_TEST_API_KEY || '4bef97b6b36bc0b2c569470b6de9256e';
 
     return key;
   },
 
-  getSpyableIugu: function() {
+  getSpyableIugu: function () {
     // Provide a testable iugu instance
     // That is, with mock-requests built in and hookable
 
@@ -27,26 +25,23 @@ var utils = module.exports = {
 
     for (var i in iuguInstance) {
       if (iuguInstance[i] instanceof Iugu.IuguResource) {
-
         // Override each _request method so we can make the params
         // avaialable to consuming tests (revealing requests made on
         // REQUESTS and LAST_REQUEST):
-        iuguInstance[i]._request = function(method, url, data, auth, cb) {
-          var req = iuguInstance.LAST_REQUEST = {
+        iuguInstance[i]._request = function (method, url, data, auth, cb) {
+          var req = (iuguInstance.LAST_REQUEST = {
             method: method,
             url: url,
-            data: data
-          };
+            data: data,
+          });
           if (auth) req.auth = auth;
           iuguInstance.REQUESTS.push(req);
           cb.call(this, null, {});
         };
-
       }
     }
 
     return iuguInstance;
-
   },
 
   /**
@@ -54,77 +49,70 @@ var utils = module.exports = {
    * CleanupUtility will automatically register on the mocha afterEach hook,
    * ensuring its called after each descendent-describe block.
    */
-  CleanupUtility: (function() {
-
+  CleanupUtility: (function () {
     CleanupUtility.DEFAULT_TIMEOUT = 20000;
 
     function CleanupUtility(timeout) {
       var self = this;
       this._cleanupFns = [];
-      this._iugu = require('../lib/iugu')(
-        utils.getUserIuguKey(),
-        'latest'
-      );
-      afterEach(function(done) {
+      this._iugu = require('../lib/iugu')(utils.getUserIuguKey(), 'latest');
+      afterEach(function (done) {
         this.timeout(timeout || CleanupUtility.DEFAULT_TIMEOUT);
         return self.doCleanup(done);
       });
     }
 
     CleanupUtility.prototype = {
-
-      doCleanup: function(done) {
+      doCleanup: function (done) {
         var cleanups = this._cleanupFns;
         var total = cleanups.length;
         var completed = 0;
-        for (var fn; fn = cleanups.shift();) {
+        for (var fn; (fn = cleanups.shift()); ) {
           var promise = fn.call(this);
           if (!promise || !promise.then) {
             throw new Error('CleanupUtility expects cleanup functions to return promises!');
           }
-          promise.then(function() {
-            // cleanup successful
-            ++completed;
-            if (completed === total) {
-              done();
+          promise.then(
+            function () {
+              // cleanup successful
+              ++completed;
+              if (completed === total) {
+                done();
+              }
+            },
+            function (err) {
+              // not successful
+              throw err;
             }
-          }, function(err) {
-            // not successful
-            throw err;
-          });
+          );
         }
         if (total === 0) done();
       },
-      add: function(fn) {
+      add: function (fn) {
         this._cleanupFns.push(fn);
       },
-      deleteSubscription: function(subscriptionId) {
-        this.add(function() {
+      deleteSubscription: function (subscriptionId) {
+        this.add(function () {
           return this._iugu.subscriptions.del(subscriptionId);
         });
       },
-      deleteInvoice: function(invoiceId) {
-        this.add(function() {
+      deleteInvoice: function (invoiceId) {
+        this.add(function () {
           return this._iugu.invoices.del(invoiceId);
         });
       },
-      deleteCustomer: function(custId) {
-        this.add(function() {
+      deleteCustomer: function (custId) {
+        this.add(function () {
           return this._iugu.customers.del(custId);
         });
       },
-      deletePlan: function(pId) {
-        this.add(function() {
+      deletePlan: function (pId) {
+        this.add(function () {
           return this._iugu.plans.del(pId);
         });
-      }     
+      },
     };
 
     return CleanupUtility;
-
-  }())
-
-};
-
-
-
+  })(),
+});

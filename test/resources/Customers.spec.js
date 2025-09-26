@@ -6,121 +6,94 @@ var when = require('when');
 
 var TEST_AUTH_KEY = 'aGN0bIwXnHdw5645VABjPdSn8nWY7G11';
 
-describe('Customers Resource', function() {
-
-  describe('retrieve', function() {
-
-    it('Sends the correct request', function() {
-
+describe('Customers Resource', function () {
+  describe('retrieve', function () {
+    it('Sends the correct request', function () {
       iugu.customers.retrieve('cus_2dkAb792h1mfa4');
       expect(iugu.LAST_REQUEST).to.deep.equal({
         method: 'GET',
         url: '/v1/customers/cus_2dkAb792h1mfa4',
-        data: {}
+        data: {},
       });
-
     });
 
-    it('Sends the correct request [with specified auth]', function() {
-
+    it('Sends the correct request [with specified auth]', function () {
       iugu.customers.retrieve('cus_2dkAb792h1mfa4', TEST_AUTH_KEY);
       expect(iugu.LAST_REQUEST).to.deep.equal({
         method: 'GET',
         url: '/v1/customers/cus_2dkAb792h1mfa4',
         data: {},
-        auth: TEST_AUTH_KEY
+        auth: TEST_AUTH_KEY,
       });
-
     });
-
   });
 
-  describe('create', function() {
-
-    it('Sends the correct request', function() {
-
+  describe('create', function () {
+    it('Sends the correct request', function () {
       iugu.customers.create({ description: 'Some customer' });
       expect(iugu.LAST_REQUEST).to.deep.equal({
         method: 'POST',
         url: '/v1/customers',
-        data: { description: 'Some customer' }
+        data: { description: 'Some customer' },
       });
-
     });
 
-    it('Sends the correct request [with specified auth]', function() {
-
+    it('Sends the correct request [with specified auth]', function () {
       iugu.customers.create({ description: 'Some customer' }, TEST_AUTH_KEY);
       expect(iugu.LAST_REQUEST).to.deep.equal({
         method: 'POST',
         url: '/v1/customers',
         data: { description: 'Some customer' },
-        auth: TEST_AUTH_KEY
+        auth: TEST_AUTH_KEY,
       });
-
     });
-
   });
 
-  describe('update', function() {
-
-    it('Sends the correct request', function() {
-
+  describe('update', function () {
+    it('Sends the correct request', function () {
       iugu.customers.update('cus_2dkAb792h1mfa4', {
-        description: 'Foo "baz"'
+        description: 'Foo "baz"',
       });
       expect(iugu.LAST_REQUEST).to.deep.equal({
         method: 'POST',
         url: '/v1/customers/cus_2dkAb792h1mfa4',
-        data: { description: 'Foo "baz"' }
+        data: { description: 'Foo "baz"' },
       });
-
     });
-
   });
 
-  describe('del', function() {
-
-    it('Sends the correct request', function() {
-
+  describe('del', function () {
+    it('Sends the correct request', function () {
       iugu.customers.del('cus_2dkAb792h1mfa4');
       expect(iugu.LAST_REQUEST).to.deep.equal({
         method: 'DELETE',
         url: '/v1/customers/cus_2dkAb792h1mfa4',
-        data: {}
+        data: {},
       });
-
     });
-
   });
 
-  describe('list', function() {
-
-    it('Sends the correct request', function() {
-
+  describe('list', function () {
+    it('Sends the correct request', function () {
       iugu.customers.list();
       expect(iugu.LAST_REQUEST).to.deep.equal({
         method: 'GET',
         url: '/v1/customers',
-        data: {}
+        data: {},
       });
-
     });
 
-    it('Sends the correct request [with specified auth]', function() {
-
+    it('Sends the correct request [with specified auth]', function () {
       iugu.customers.list(TEST_AUTH_KEY);
       expect(iugu.LAST_REQUEST).to.deep.equal({
         method: 'GET',
         url: '/v1/customers',
         data: {},
-        auth: TEST_AUTH_KEY
+        auth: TEST_AUTH_KEY,
       });
-
     });
-
   });
-/*
+  /*
   describe('Payment methods', function() {
 
     describe('retrieveCard', function() {

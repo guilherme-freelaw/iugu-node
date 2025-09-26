@@ -3,61 +3,57 @@
 var testUtils = require('./testUtils');
 var chai = require('chai');
 var when = require('when');
-var iugu = require('../lib/iugu')(
-  testUtils.getUserIuguKey(),
-  'latest'
-);
+var iugu = require('../lib/iugu')(testUtils.getUserIuguKey(), 'latest');
 
 var expect = chai.expect;
 
 var CUSTOMER_DATA = {
-  'email': 'email@email.com',
-  'name': 'Nome do Cliente',
-  'notes': 'Anotações Gerais'
+  email: 'email@email.com',
+  name: 'Nome do Cliente',
+  notes: 'Anotações Gerais',
 };
 
 var PLAN_DATA = {
-  'name': 'Plano Básico',
-  'identifier': 'basic_plan',
-  'interval': '1',
-  'interval_type': 'months',
+  name: 'Plano Básico',
+  identifier: 'basic_plan',
+  interval: '1',
+  interval_type: 'months',
   'prices[][currency]': 'BRL',
   'prices[][value_cents]': '1000',
   'features[][name]': 'Número de Usuários',
   'features[][identifier]': 'users',
-  'features[][value]': '10'
-}
+  'features[][value]': '10',
+};
 
 var SUBSCRIPTION_DATA = {
-  'plan_identifier': 'basic_plan',
-  'customer_id': '',
-  'only_on_charge_success': 'false',
+  plan_identifier: 'basic_plan',
+  customer_id: '',
+  only_on_charge_success: 'false',
   'subitems[][description]': 'Item um',
-  'subitems[][price_cents]': '1000', 
-  'subitems[][quantity]': '1'
-}
+  'subitems[][price_cents]': '1000',
+  'subitems[][quantity]': '1',
+};
 
 var PAYMENT_METHOD_DATA = {
-  'description': 'Meu Cartão de Crédito',
-  'item_type': 'credit_card',
+  description: 'Meu Cartão de Crédito',
+  item_type: 'credit_card',
   'data[number]': '4111111111111111',
   'data[verification_value]': '123',
   'data[first_name]': 'Joao',
   'data[last_name]': 'Silva',
   'data[month]': '12',
-  'data[year]': '2015'
+  'data[year]': '2015',
 };
 
-describe('Flows', function() {
-
+describe('Flows', function () {
   // Note: These tests must be run as one so we can retrieve the
   // default_currency (required in subsequent tests);
 
   var cleanup = new testUtils.CleanupUtility();
   this.timeout(6000);
-  
-  describe('Plan+Subscription flow', function() {
-/*
+
+  describe('Plan+Subscription flow', function () {
+    /*
     it('Allows me to: Create a plan and subscribe a customer to it', function() {
       return expect(
         when.join(iugu.plans.create(PLAN_DATA),
@@ -83,38 +79,38 @@ describe('Flows', function() {
 
     });
     */
-    it('Allows me to: Create a plan and subscribe a customer to it using bankslip', function() {
+    it('Allows me to: Create a plan and subscribe a customer to it using bankslip', function () {
       return expect(
-        when.join(
-          iugu.customers.create(CUSTOMER_DATA)
-        ).then(function(j) {
+        when
+          .join(iugu.customers.create(CUSTOMER_DATA))
+          .then(function (j) {
+            var plan = j[0];
+            var customer = j[1];
+            SUBSCRIPTION_DATA.customer_id = plan.id;
+            SUBSCRIPTION_DATA.plan_identifier = 'plano_basico';
+            SUBSCRIPTION_DATA.credits_based = false;
+            //cleanup.deleteCustomer(customer.id);
+            //cleanup.deletePlan(plan.id);
 
-          var plan = j[0];
-          var customer = j[1];
-          SUBSCRIPTION_DATA.customer_id = plan.id;
-          SUBSCRIPTION_DATA.plan_identifier = 'plano_basico';
-          SUBSCRIPTION_DATA.credits_based = false;
-          //cleanup.deleteCustomer(customer.id);
-          //cleanup.deletePlan(plan.id);
+            return iugu.subscriptions.create(SUBSCRIPTION_DATA);
+          })
+          .then(function (subscription) {
+            //cleanup.deleteInvoice(subscription.recent_invoices[0].id);
+            //cleanup.deleteSubscription(subscription.id);
+            SUBSCRIPTION_DATA.credits_cycle = '1000';
+            SUBSCRIPTION_DATA.price_cents = '5000';
+            SUBSCRIPTION_DATA.credits_based = true;
+            return iugu.subscriptions.create(SUBSCRIPTION_DATA);
+          })
+          .then(function (subscription) {
+            //cleanup.deleteInvoice(subscription.recent_invoices[0].id);
+            //cleanup.deleteSubscription(subscription.id);
 
-          return iugu.subscriptions.create(SUBSCRIPTION_DATA);
-        }).then(function(subscription) {
-          //cleanup.deleteInvoice(subscription.recent_invoices[0].id);
-          //cleanup.deleteSubscription(subscription.id);
-          SUBSCRIPTION_DATA.credits_cycle = '1000';
-          SUBSCRIPTION_DATA.price_cents = '5000';
-          SUBSCRIPTION_DATA.credits_based = true;
-          return iugu.subscriptions.create(SUBSCRIPTION_DATA);
-        }).then(function(subscription) {
-          //cleanup.deleteInvoice(subscription.recent_invoices[0].id);
-          //cleanup.deleteSubscription(subscription.id);
-
-          return [subscription.suspended, subscription.currency];
-        })
+            return [subscription.suspended, subscription.currency];
+          })
       ).to.eventually.deep.equal([false, 'BRL']);
-
     });
-/*
+    /*
     it('Allows me to: Create a plan and subscribe a customer to it, and update subscription (multi-subs API)', function() {
       var plan;
       return expect(
@@ -204,8 +200,8 @@ describe('Flows', function() {
         })
       ).to.eventually.have.property('cancel_at_period_end', true);
 */
-    });
-/*
+  });
+  /*
     describe('Plan name variations', function() {
       [
         '34535 355453' + +new Date,

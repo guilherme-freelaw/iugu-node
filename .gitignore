@@ -23,3 +23,25 @@ Thumbs.db
 buildAssets
 
 .env
+# Generated data
+/out/
+
+# Logs and temp
+logs/
+tmp/
+*.log
+
+# Supabase local temp
+supabase/.temp/
+
+# Reports/docs artifacts
+docs/reports/
+
+# Checkpoints
+*checkpoint*.json
+sync_checkpoints/
+
+# OS/editor junk
+.DS_Store
+*.swp
+

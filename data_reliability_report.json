@@ -1,0 +1,104 @@
+{
+  "tests": [
+    {
+      "test": "Database Connectivity",
+      "status": "PASS",
+      "details": "Connected successfully. 17,958 invoices found",
+      "threshold": null,
+      "actual": null,
+      "expected": null,
+      "timestamp": "2025-09-11T17:05:53.194Z"
+    },
+    {
+      "test": "Iugu API Connectivity",
+      "status": "PASS",
+      "details": "API accessible and responding correctly",
+      "threshold": null,
+      "actual": null,
+      "expected": null,
+      "timestamp": "2025-09-11T17:05:53.938Z"
+    },
+    {
+      "test": "Data Completeness",
+      "status": "PASS",
+      "details": "Status: 98.4%, Values: 98.4%",
+      "threshold": null,
+      "actual": null,
+      "expected": null,
+      "timestamp": "2025-09-11T17:05:55.296Z"
+    },
+    {
+      "test": "Duplicate Detection",
+      "status": "PASS",
+      "details": "No duplicates found in sample of 1000 records",
+      "threshold": null,
+      "actual": null,
+      "expected": null,
+      "timestamp": "2025-09-11T17:05:55.975Z"
+    },
+    {
+      "test": "Data Types",
+      "status": "PASS",
+      "details": "99.5% of fields have correct types",
+      "threshold": null,
+      "actual": null,
+      "expected": null,
+      "timestamp": "2025-09-11T17:05:56.158Z"
+    },
+    {
+      "test": "Data Freshness",
+      "status": "WARN",
+      "details": "No recent data and no sync checkpoint found",
+      "threshold": null,
+      "actual": null,
+      "expected": null,
+      "timestamp": "2025-09-11T17:05:56.693Z"
+    },
+    {
+      "test": "Revenue Accuracy 2025-08",
+      "status": "PASS",
+      "details": "99.2% accurate (R$ 793,393.87 vs R$ 799,490)",
+      "threshold": 98,
+      "actual": 99.2374976547549,
+      "expected": 799490,
+      "timestamp": "2025-09-11T17:05:56.880Z"
+    },
+    {
+      "test": "Revenue Accuracy 2025-07",
+      "status": "WARN",
+      "details": "97.3% accurate (below 98%)",
+      "threshold": 98,
+      "actual": 97.28496544938736,
+      "expected": 784646,
+      "timestamp": "2025-09-11T17:05:57.063Z"
+    },
+    {
+      "test": "Revenue Accuracy 2025-06",
+      "status": "FAIL",
+      "details": "94.6% accurate (below 95%)",
+      "threshold": 95,
+      "actual": 94.58236905682386,
+      "expected": 747538,
+      "timestamp": "2025-09-11T17:05:57.292Z"
+    },
+    {
+      "test": "Revenue Accuracy 2025-05",
+      "status": "PASS",
+      "details": "99.5% accurate (R$ 745,827.12 vs R$ 749,793)",
+      "threshold": 98,
+      "actual": 99.47107001532423,
+      "expected": 749793,
+      "timestamp": "2025-09-11T17:05:57.480Z"
+    }
+  ],
+  "summary": {
+    "total": 10,
+    "passed": 0,
+    "failed": 0,
+    "warnings": 0,
+    "pass": null,
+    "warn": null,
+    "fail": null
+  },
+  "timestamp": "2025-09-11T17:05:52.472Z"
+}

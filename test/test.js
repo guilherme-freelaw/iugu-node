@@ -1,50 +1,45 @@
 'use strict';
 
-var iugu = require('../lib/iugu')(
-  'fa484a7c14ff046c6f1c589d2f0c389b',
-  'latest'
-);
-
+var iugu = require('../lib/iugu')('fa484a7c14ff046c6f1c589d2f0c389b', 'latest');
 
 iugu.setApiKey('fa484a7c14ff046c6f1c589d2f0c389b');
 
-
 var CUSTOMER_DATA = {
-  'email': 'email@email.com',
-  'name': 'Nome do Cliente',
-  'notes': 'Anotações Gerais'
+  email: 'email@email.com',
+  name: 'Nome do Cliente',
+  notes: 'Anotações Gerais',
 };
 
 var PLAN_DATA = {
-  'name': 'Plano Básico',
-  'identifier': 'basic_plan',
-  'interval': '1',
-  'interval_type': 'months',
+  name: 'Plano Básico',
+  identifier: 'basic_plan',
+  interval: '1',
+  interval_type: 'months',
   'prices[][currency]': 'BRL',
   'prices[][value_cents]': '1000',
   'features[][name]': 'Número de Usuários',
   'features[][identifier]': 'users',
-  'features[][value]': '10'
-}
+  'features[][value]': '10',
+};
 
 var SUBSCRIPTION_DATA = {
-  'plan_identifier': 'basic_plan',
-  'customer_id': '',
-  'only_on_charge_success': 'false',
+  plan_identifier: 'basic_plan',
+  customer_id: '',
+  only_on_charge_success: 'false',
   'subitems[][description]': 'Item um',
   'subitems[][price_cents]': '1000',
-  'subitems[][quantity]': '1'
-}
+  'subitems[][quantity]': '1',
+};
 
 var PAYMENT_METHOD_DATA = {
-  'description': 'Meu Cartão de Crédito',
-  'item_type': 'credit_card',
+  description: 'Meu Cartão de Crédito',
+  item_type: 'credit_card',
   'data[number]': '4111111111111111',
   'data[verification_value]': '123',
   'data[first_name]': 'Joao',
   'data[last_name]': 'Silva',
   'data[month]': '12',
-  'data[year]': '2015'
+  'data[year]': '2015',
 };
 /*
 
@@ -84,41 +79,39 @@ iugu.plans.create(PLAN_DATA, function(err, plan) {
 })*/
 
 function clearAll() {
-  iugu.invoices.list(function(err, res) {
-  console.log(err);
-  console.log(res);
-  res.items.forEach(function (item) {
-    iugu.invoices.del(item.id, function(e, r) {
-      console.log(e);
-      console.log(r);
+  iugu.invoices.list(function (err, res) {
+    console.log(err);
+    console.log(res);
+    res.items.forEach(function (item) {
+      iugu.invoices.del(item.id, function (e, r) {
+        console.log(e);
+        console.log(r);
+      });
     });
   });
-});
-iugu.subscriptions.list(function(err, res) {
-  console.log(err);
-  console.log(res);
-  res.items.forEach(function (item) {
-    iugu.subscriptions.del(item.id);
+  iugu.subscriptions.list(function (err, res) {
+    console.log(err);
+    console.log(res);
+    res.items.forEach(function (item) {
+      iugu.subscriptions.del(item.id);
+    });
   });
-});
 
-iugu.customers.list(function(err, res) {
-  console.log(err);
-  console.log(res);
-  res.items.forEach(function (item) {
-    iugu.customers.del(item.id);
+  iugu.customers.list(function (err, res) {
+    console.log(err);
+    console.log(res);
+    res.items.forEach(function (item) {
+      iugu.customers.del(item.id);
+    });
   });
-});
 
-iugu.plans.list(function(err, res) {
-  console.log(err);
-  console.log(res);
-  res.items.forEach(function (item) {
-    iugu.plans.del(item.id);
+  iugu.plans.list(function (err, res) {
+    console.log(err);
+    console.log(res);
+    res.items.forEach(function (item) {
+      iugu.plans.del(item.id);
+    });
   });
-});
-
-
 }
 
 console.log('test.js');
@@ -155,21 +148,18 @@ iugu.token.create(
       'payer[address][zip_code]': '12122-000'
     };
 */
-    var data = {
-        method: 'bank_slip',
-        email: 'lspecian@gmail.com',
-        'items': [{description: 'Saco de batata',
-                quantity: '1',
-                price_cents: '100'} ,
-                {description: '2 Saco de batata',
-                quantity: '1',
-                price_cents: '100'
-              }]
-    }
+var data = {
+  method: 'bank_slip',
+  email: 'lspecian@gmail.com',
+  items: [
+    { description: 'Saco de batata', quantity: '1', price_cents: '100' },
+    { description: '2 Saco de batata', quantity: '1', price_cents: '100' },
+  ],
+};
 
-    //data.token = token.id;
-    iugu.charge.create(data, function(err, res) {
-      console.log(err);
-      console.log(res);
-    });
+//data.token = token.id;
+iugu.charge.create(data, function (err, res) {
+  console.log(err);
+  console.log(res);
+});
 //});
