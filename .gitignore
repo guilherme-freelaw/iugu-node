@@ -45,3 +45,40 @@ sync_checkpoints/
 .DS_Store
 *.swp
 
+
+# Node essentials
+node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Env and editor
+.env
+.env.*
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Logs
+*.log
+
+# Supabase local temp
+supabase/.temp/
+
+# Generated outputs
+out/
+docs/reports/
+
+# Checkpoints and transient data
+period_backfill_checkpoint.json
+sync_checkpoint.json
+hourly_sync_checkpoint.json
+sync_checkpoints/
+monitoring_history.json
+data_reliability_report.json
+
+# Misc tmp
+tmp/
+
