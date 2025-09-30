@@ -52,7 +52,8 @@ describe('Flows', function () {
   var cleanup = new testUtils.CleanupUtility();
   this.timeout(6000);
 
-  describe('Plan+Subscription flow', function () {
+  var maybeDescribe = testUtils.IS_ONLINE ? describe : describe.skip;
+  maybeDescribe('Plan+Subscription flow', function () {
     /*
     it('Allows me to: Create a plan and subscribe a customer to it', function() {
       return expect(

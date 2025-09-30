@@ -3,7 +3,7 @@
 var testUtils = require('./testUtils');
 var chai = require('chai');
 var when = require('when');
-var iugu = require('../lib/iugu')(testUtils.getUserIuguKey(), 'latest');
+var iugu = testUtils.getIugu();
 
 var expect = chai.expect;
 
@@ -43,11 +43,13 @@ describe('Iugu Module', function () {
 
   describe('Callback support', function () {
     describe('Any given endpoint', function () {
-      it('Will call a callback if successful', function (done) {
+      it('Will call a callback if successful', function () {
         var defer = when.defer();
 
         iugu.customers.create(CUSTOMER_DATA, function (err, customer) {
-          cleanup.deleteCustomer(customer.id);
+          if (!err && customer && customer.id) {
+            cleanup.deleteCustomer(customer.id);
+          }
           defer.resolve('Called!');
         });
 

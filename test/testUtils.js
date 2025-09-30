@@ -8,10 +8,19 @@ require('chai').use(require('chai-as-promised'));
 var when = require('when');
 
 var utils = (module.exports = {
+  IS_ONLINE: !!process.env.IUGU_TEST_API_KEY,
   getUserIuguKey: function () {
     var key = process.env.IUGU_TEST_API_KEY || '4bef97b6b36bc0b2c569470b6de9256e';
 
     return key;
+  },
+
+  getIugu: function () {
+    // Return a real client if an API key is provided; otherwise return a spyable client
+    if (process.env.IUGU_TEST_API_KEY) {
+      return require('../lib/iugu')(process.env.IUGU_TEST_API_KEY, 'latest');
+    }
+    return utils.getSpyableIugu();
   },
 
   getSpyableIugu: function () {

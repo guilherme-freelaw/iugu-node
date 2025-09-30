@@ -33,9 +33,20 @@ Acesse [iugu.com/documentacao](http://iugu.com/documentacao) para referência
 
 ### Ambiente (.env)
 
-- Copie `.env.example` para `.env` e preencha as variáveis (`IUGU_API_TOKEN`, `IUGU_API_BASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`).
+- Copie `.env.example` para `.env` e preencha as variáveis:
+- `IUGU_API_TOKEN` (chave privada da Iugu)
+- `IUGU_API_BASE_URL` (default `https://api.iugu.com/v1`)
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
 - Não commite o `.env` (já está listado no `.gitignore`).
 - Se alguma chave real tiver sido exposta, rotacione-a imediatamente.
+
+#### Testar conexão com Supabase
+
+```bash
+npm run test:supabase
+```
+Mostra HTTP status e um `select` simples na tabela `iugu_plans` para validar credenciais.
 
 ## Testes
 Execute :

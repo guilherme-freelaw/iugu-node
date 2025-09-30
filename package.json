@@ -64,6 +64,7 @@
     "compute:unpaid:competency:current": "node -r dotenv/config scripts/compute_unpaid_competency_current_month.js",
     "compute:unpaid:competency:current:by-customer": "node -r dotenv/config scripts/compute_unpaid_competency_current_month_by_customer.js",
     "realtime:listen": "node -r dotenv/config scripts/realtime_listener.js",
+    "test:supabase": "node scripts/test_supabase_connection.js",
     "clean": "rimraf out tmp 'supabase/.temp' 'docs/reports' dist build coverage .nyc_output && git clean -fdX",
     "postinstall": "node -e \"console.log('Postinstall: nothing to do')\""
   }
