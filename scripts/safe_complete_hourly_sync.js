@@ -8,7 +8,7 @@ const IUGU_API_BASE_URL = process.env.IUGU_API_BASE_URL;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const SYNC_CHECKPOINT_FILE = 'sync_checkpoint.json';
+const SYNC_CHECKPOINT_FILE = 'hourly_sync_checkpoint.json';
 const fs = require('fs');
 
 function logWithTimestamp(message) {
@@ -345,10 +345,11 @@ async function safeHourlySync() {
 
     // Atualizar checkpoint
     const newCheckpoint = {
-      lastSync: startTime.toISOString(),
-      ...results,
-      completedAt: new Date().toISOString(),
-    };
+  lastSync: startTime.toISOString(),
+  ...results,
+  totalSynced: Object.values(results).reduce((a,b)=>a+(Number(b)||0),0),
+  lastRun: new Date().toISOString(),
+};
 
     saveCheckpoint(newCheckpoint);
 
