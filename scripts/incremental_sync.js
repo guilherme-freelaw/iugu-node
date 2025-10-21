@@ -5,6 +5,7 @@ const IUGU_API_TOKEN = process.env.IUGU_API_TOKEN;
 const IUGU_API_BASE_URL = process.env.IUGU_API_BASE_URL || 'https://api.iugu.com/v1';
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const { upsertViaRpc } = require('./lib/upsert_rpc');
 
 if (!IUGU_API_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error('Missing required environment variables');
@@ -12,6 +13,7 @@ if (!IUGU_API_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 const BASIC_AUTH = 'Basic ' + Buffer.from(IUGU_API_TOKEN + ':').toString('base64');
+const SYNC_CHECKPOINT_FILE = 'hourly_sync_checkpoint.json';
 
 // Entities to sync incrementally
 const SYNC_ENTITIES = {
@@ -44,44 +46,28 @@ const SYNC_ENTITIES = {
 async function getLastSyncTimestamp(entityName) {
   try {
     const fs = await import('node:fs');
-    const syncFile = `sync_checkpoints/${entityName}_last_sync.json`;
-
-    if (fs.existsSync(syncFile)) {
-      const data = JSON.parse(fs.readFileSync(syncFile, 'utf8'));
+    if (fs.existsSync(SYNC_CHECKPOINT_FILE)) {
+      const data = JSON.parse(fs.readFileSync(SYNC_CHECKPOINT_FILE, 'utf8'));
       return data.lastSync;
     }
-
-    // If no sync file, start from 24 hours ago
-    const yesterday = new Date();
-    yesterday.setHours(yesterday.getHours() - 24);
-    return yesterday.toISOString();
-  } catch (err) {
-    console.warn(`Error reading sync timestamp for ${entityName}:`, err.message);
-    // Default to 1 hour ago
-    const oneHourAgo = new Date();
-    oneHourAgo.setHours(oneHourAgo.getHours() - 1);
-    return oneHourAgo.toISOString();
+  } catch (e) {
+    console.warn(`Error reading checkpoint:`, e.message);
   }
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  return oneHourAgo.toISOString();
 }
 
 async function saveLastSyncTimestamp(entityName, timestamp) {
   try {
     const fs = await import('node:fs');
-
-    if (!fs.existsSync('sync_checkpoints')) {
-      fs.mkdirSync('sync_checkpoints');
+    let existing = {};
+    if (fs.existsSync(SYNC_CHECKPOINT_FILE)) {
+      existing = JSON.parse(fs.readFileSync(SYNC_CHECKPOINT_FILE, 'utf8'));
     }
-
-    const syncFile = `sync_checkpoints/${entityName}_last_sync.json`;
-    const data = {
-      entityName,
-      lastSync: timestamp,
-      syncedAt: new Date().toISOString(),
-    };
-
-    fs.writeFileSync(syncFile, JSON.stringify(data, null, 2));
-  } catch (err) {
-    console.warn(`Error saving sync timestamp for ${entityName}:`, err.message);
+    const data = { ...existing, lastSync: timestamp, lastRun: new Date().toISOString() };
+    fs.writeFileSync(SYNC_CHECKPOINT_FILE, JSON.stringify(data, null, 2));
+  } catch (e) {
+    console.warn(`Error saving checkpoint:`, e.message);
   }
 }
 
@@ -144,17 +130,8 @@ async function fetchUpdatedRecords(entity, entityName, sinceTimestamp) {
 
 async function upsertRecord(entityName, record, upsertRpc) {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${upsertRpc}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      },
-      body: JSON.stringify({ payload: record }),
-    });
-
-    return res.ok;
+    await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, entityName, record);
+    return true;
   } catch (err) {
     console.warn(`Error upserting ${entityName} ${record.id}:`, err.message);
     return false;
