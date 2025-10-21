@@ -1,8 +1,8 @@
 name: Sync Iugu Account Balances
 
 on:
-  # schedule:
-  #   - cron: '*/30 * * * *'
+  schedule:
+    - cron: '*/30 * * * *'  # A cada 30 minutos
   workflow_dispatch: {}
 
 jobs:

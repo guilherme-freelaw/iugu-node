@@ -7,6 +7,7 @@ const IUGU_API_TOKEN = process.env.IUGU_API_TOKEN;
 const IUGU_API_BASE_URL = process.env.IUGU_API_BASE_URL;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const { upsertViaRpc } = require('./lib/upsert_rpc');
 
 const SYNC_CHECKPOINT_FILE = 'sync_checkpoint.json';
 const fs = require('fs');
@@ -118,23 +119,8 @@ async function makeIuguRequest(endpoint, retries = 3, delay = 1000) {
 }
 
 async function upsertToSupabase(table, data) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      'Content-Type': 'application/json',
-      Prefer: 'resolution=merge-duplicates',
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Supabase ${table} error: ${response.status} - ${errorText}`);
-  }
-
-  return response;
+  const entity = String(table).replace(/^iugu_/, '');
+  return upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, entity, data);
 }
 
 function loadCheckpoint() {
