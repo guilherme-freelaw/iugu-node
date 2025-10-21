@@ -2,6 +2,7 @@
 
 const https = require('https');
 const fs = require('fs');
+const { upsertViaRpc } = require('./lib/upsert_rpc');
 
 // Configurações
 const IUGU_API_TOKEN = process.env.IUGU_API_TOKEN;
@@ -238,19 +239,15 @@ async function ultimatePeriodicSync(startDate, endDate, periodName) {
           try {
             stats.processed++;
 
-            const normalizedInvoice = ultimateNormalizeInvoice(invoice);
-
-            if (!normalizedInvoice) {
+            // Verificar se o valor é válido antes de processar
+            const totalCents = invoice.total_cents || (invoice.total ? Math.round(invoice.total * 100) : 0);
+            if (!totalCents || totalCents <= 0) {
               stats.skipped++;
               continue;
             }
 
-            // Tentar inserir no Supabase
-            await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_invoices`, {
-              method: 'POST',
-              headers: supabaseHeaders,
-              body: JSON.stringify(normalizedInvoice),
-            });
+            // Usar RPC helper para upsert com payload bruto da Iugu
+            await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'invoices', invoice);
 
             stats.inserted++;
 
