@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const https = require('https');
+const { upsertViaRpc } = require('./lib/upsert_rpc');
 
 // Configurações
 const IUGU_API_TOKEN =
@@ -173,20 +174,22 @@ async function resolveSubscriptions() {
           // Criar cliente dummy se não existir
           if (customerId && !customerSet.has(customerId)) {
             try {
-              const dummyCustomer = {
+              const dummyCustomerPayload = {
                 id: customerId,
+                dummy: true,
+                source: 'subscription_dependency',
                 email: `dummy-${customerId}@placeholder.com`,
                 name: `Cliente ${customerId.substring(0, 8)}`,
-                created_at_iugu: parseIuguDate(subscription.created_at) || new Date().toISOString(),
-                updated_at_iugu: parseIuguDate(subscription.updated_at) || new Date().toISOString(),
-                raw_json: { id: customerId, dummy: true, source: 'subscription_dependency' },
+                created_at: subscription.created_at || new Date().toISOString(),
+                updated_at: subscription.updated_at || new Date().toISOString(),
               };
 
-              await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_customers`, {
-                method: 'POST',
-                headers: supabaseHeaders,
-                body: JSON.stringify(dummyCustomer),
-              });
+              await upsertViaRpc(
+                SUPABASE_URL,
+                SUPABASE_SERVICE_ROLE_KEY,
+                'customers',
+                dummyCustomerPayload
+              );
 
               customerSet.add(customerId);
               totalCreatedCustomers++;
@@ -200,29 +203,27 @@ async function resolveSubscriptions() {
           // Criar plano dummy se não existir
           if (planId && !planIdSet.has(planId) && !planIdentifierSet.has(planId)) {
             try {
-              const dummyPlan = {
-                id: `DUMMY_${planId.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`,
-                name: `Plano ${planId}`,
+              const dummyPlanId = `DUMMY_${planId.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;
+              const dummyPlanPayload = {
+                id: planId,
                 identifier: planId,
+                dummy: true,
+                source: 'subscription_dependency',
+                name: `Plano ${planId}`,
                 interval: 1,
                 value_cents: 0,
-                created_at_iugu: parseIuguDate(subscription.created_at) || new Date().toISOString(),
-                updated_at_iugu: parseIuguDate(subscription.updated_at) || new Date().toISOString(),
-                raw_json: {
-                  id: planId,
-                  identifier: planId,
-                  dummy: true,
-                  source: 'subscription_dependency',
-                },
+                created_at: subscription.created_at || new Date().toISOString(),
+                updated_at: subscription.updated_at || new Date().toISOString(),
               };
 
-              await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_plans`, {
-                method: 'POST',
-                headers: supabaseHeaders,
-                body: JSON.stringify(dummyPlan),
-              });
+              await upsertViaRpc(
+                SUPABASE_URL,
+                SUPABASE_SERVICE_ROLE_KEY,
+                'plans',
+                dummyPlanPayload
+              );
 
-              planIdSet.add(dummyPlan.id);
+              planIdSet.add(dummyPlanId);
               planIdentifierSet.add(planId);
               totalCreatedPlans++;
             } catch (err) {
@@ -233,22 +234,12 @@ async function resolveSubscriptions() {
           }
 
           // Agora criar a assinatura
-          const subscriptionData = {
-            id: subscription.id,
-            customer_id: customerId,
-            plan_id: planId,
-            suspended: subscription.suspended || false,
-            expires_at: parseIuguDate(subscription.expires_at),
-            created_at_iugu: parseIuguDate(subscription.created_at),
-            updated_at_iugu: parseIuguDate(subscription.updated_at),
-            raw_json: subscription,
-          };
-
-          await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_subscriptions`, {
-            method: 'POST',
-            headers: supabaseHeaders,
-            body: JSON.stringify(subscriptionData),
-          });
+          await upsertViaRpc(
+            SUPABASE_URL,
+            SUPABASE_SERVICE_ROLE_KEY,
+            'subscriptions',
+            subscription
+          );
 
           totalSynced++;
 
@@ -305,36 +296,12 @@ async function resolveChargebacks() {
 
     for (const chargeback of response.items) {
       try {
-        // Extrair amount_cents do objeto ou usar valor padrão
-        let amountCents = 0;
-        if (chargeback.amount) {
-          if (typeof chargeback.amount === 'number') {
-            amountCents = Math.round(chargeback.amount * 100);
-          } else if (typeof chargeback.amount === 'string') {
-            const numericAmount = parseFloat(
-              chargeback.amount.replace(/[^\d.,]/g, '').replace(',', '.')
-            );
-            if (!isNaN(numericAmount)) {
-              amountCents = Math.round(numericAmount * 100);
-            }
-          }
-        }
-
-        const chargebackData = {
-          id: chargeback.id,
-          invoice_id: chargeback.invoice_id,
-          amount_cents: amountCents,
-          status: chargeback.status,
-          created_at_iugu: parseIuguDate(chargeback.created_at),
-          updated_at_iugu: parseIuguDate(chargeback.updated_at),
-          raw_json: chargeback,
-        };
-
-        await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_chargebacks`, {
-          method: 'POST',
-          headers: supabaseHeaders,
-          body: JSON.stringify(chargebackData),
-        });
+        await upsertViaRpc(
+          SUPABASE_URL,
+          SUPABASE_SERVICE_ROLE_KEY,
+          'chargebacks',
+          chargeback
+        );
 
         syncedCount++;
       } catch (error) {
@@ -375,36 +342,12 @@ async function resolveTransfers() {
 
     for (const transfer of response.items) {
       try {
-        // Extrair amount_cents do objeto
-        let amountCents = 0;
-        if (transfer.amount) {
-          if (typeof transfer.amount === 'number') {
-            amountCents = Math.round(transfer.amount * 100);
-          } else if (typeof transfer.amount === 'string') {
-            // "6,605.51 BRL" -> 660551
-            const numericAmount = parseFloat(
-              transfer.amount.replace(/[^\d.,]/g, '').replace(',', '')
-            );
-            if (!isNaN(numericAmount)) {
-              amountCents = Math.round(numericAmount * 100);
-            }
-          }
-        }
-
-        const transferData = {
-          id: transfer.id,
-          amount_cents: amountCents,
-          status: transfer.status,
-          created_at_iugu: parseIuguDate(transfer.created_at),
-          updated_at_iugu: parseIuguDate(transfer.updated_at),
-          raw_json: transfer,
-        };
-
-        await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_transfers`, {
-          method: 'POST',
-          headers: supabaseHeaders,
-          body: JSON.stringify(transferData),
-        });
+        await upsertViaRpc(
+          SUPABASE_URL,
+          SUPABASE_SERVICE_ROLE_KEY,
+          'transfers',
+          transfer
+        );
 
         syncedCount++;
       } catch (error) {
