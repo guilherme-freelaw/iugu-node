@@ -3,6 +3,7 @@
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const { upsertViaRpc } = require('./lib/upsert_rpc');
 
 // Configurações
 const IUGU_API_TOKEN =
@@ -144,24 +145,7 @@ async function syncPlans() {
 
     for (const plan of response.items) {
       try {
-        const planData = {
-          id: plan.id,
-          name: plan.name,
-          identifier: plan.identifier,
-          interval: plan.interval,
-          interval_type: plan.interval_type,
-          value_cents: plan.value_cents || plan.value * 100,
-          created_at_iugu: parseIuguDate(plan.created_at),
-          updated_at_iugu: parseIuguDate(plan.updated_at),
-          raw_json: plan,
-        };
-
-        await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_plans`, {
-          method: 'POST',
-          headers: supabaseHeaders,
-          body: JSON.stringify(planData),
-        });
-
+        await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'plans', plan);
         syncedCount++;
       } catch (error) {
         logWithTimestamp(`⚠️ Erro ao sincronizar plano ${plan.id}: ${error.message}`);
@@ -201,23 +185,7 @@ async function syncSubscriptions() {
 
       for (const subscription of response.items) {
         try {
-          const subscriptionData = {
-            id: subscription.id,
-            customer_id: subscription.customer_id,
-            plan_id: subscription.plan_identifier || subscription.plan_id,
-            suspended: subscription.suspended || false,
-            expires_at: parseIuguDate(subscription.expires_at),
-            created_at_iugu: parseIuguDate(subscription.created_at),
-            updated_at_iugu: parseIuguDate(subscription.updated_at),
-            raw_json: subscription,
-          };
-
-          await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_subscriptions`, {
-            method: 'POST',
-            headers: supabaseHeaders,
-            body: JSON.stringify(subscriptionData),
-          });
-
+          await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'subscriptions', subscription);
           totalSynced++;
         } catch (error) {
           logWithTimestamp(
@@ -263,23 +231,7 @@ async function syncCharges() {
 
     for (const charge of response.items) {
       try {
-        const chargeData = {
-          id: charge.id,
-          invoice_id: charge.invoice_id,
-          method: charge.method,
-          status: charge.status,
-          value_cents: charge.value_cents || charge.value * 100,
-          created_at_iugu: parseIuguDate(charge.created_at),
-          updated_at_iugu: parseIuguDate(charge.updated_at),
-          raw_json: charge,
-        };
-
-        await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_charges`, {
-          method: 'POST',
-          headers: supabaseHeaders,
-          body: JSON.stringify(chargeData),
-        });
-
+        await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'charges', charge);
         syncedCount++;
       } catch (error) {
         logWithTimestamp(`⚠️ Erro ao sincronizar charge ${charge.id}: ${error.message}`);
@@ -325,24 +277,7 @@ async function syncPaymentMethods() {
         if (response.items && response.items.length > 0) {
           for (const method of response.items) {
             try {
-              const methodData = {
-                id: method.id,
-                customer_id: customer.id,
-                description: method.description,
-                item_type: method.item_type,
-                brand: method.brand,
-                last_four_digits: method.last_four_digits,
-                created_at_iugu: parseIuguDate(method.created_at),
-                updated_at_iugu: parseIuguDate(method.updated_at),
-                raw_json: method,
-              };
-
-              await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_payment_methods`, {
-                method: 'POST',
-                headers: supabaseHeaders,
-                body: JSON.stringify(methodData),
-              });
-
+              await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'payment_methods', method);
               syncedCount++;
             } catch (error) {
               logWithTimestamp(`⚠️ Erro ao sincronizar método ${method.id}: ${error.message}`);
@@ -386,22 +321,7 @@ async function syncTransfers() {
 
     for (const transfer of response.items) {
       try {
-        const transferData = {
-          id: transfer.id,
-          amount_cents: transfer.amount_cents || transfer.amount * 100,
-          amount_localized: transfer.amount_localized,
-          status: transfer.status,
-          created_at_iugu: parseIuguDate(transfer.created_at),
-          updated_at_iugu: parseIuguDate(transfer.updated_at),
-          raw_json: transfer,
-        };
-
-        await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_transfers`, {
-          method: 'POST',
-          headers: supabaseHeaders,
-          body: JSON.stringify(transferData),
-        });
-
+        await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'transfers', transfer);
         syncedCount++;
       } catch (error) {
         logWithTimestamp(`⚠️ Erro ao sincronizar transferência ${transfer.id}: ${error.message}`);
