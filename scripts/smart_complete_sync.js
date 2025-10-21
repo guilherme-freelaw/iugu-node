@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const https = require('https');
+const { upsertViaRpc } = require('./lib/upsert_rpc');
 
 // Configurações
 const IUGU_API_TOKEN =
@@ -140,24 +141,7 @@ async function syncPlans() {
 
       for (const plan of response.items) {
         try {
-          // APENAS colunas que sabemos que existem
-          const planData = {
-            id: plan.id,
-            name: plan.name,
-            identifier: plan.identifier,
-            interval: plan.interval,
-            value_cents: plan.value_cents || (plan.value ? plan.value * 100 : 0),
-            created_at_iugu: parseIuguDate(plan.created_at),
-            updated_at_iugu: parseIuguDate(plan.updated_at),
-            raw_json: plan,
-          };
-
-          await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_plans`, {
-            method: 'POST',
-            headers: supabaseHeaders,
-            body: JSON.stringify(planData),
-          });
-
+          await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'plans', plan);
           totalSynced++;
         } catch (error) {
           if (!error.message.includes('duplicate key')) {
@@ -208,24 +192,7 @@ async function syncSubscriptions() {
 
       for (const subscription of response.items) {
         try {
-          // APENAS colunas básicas que existem
-          const subscriptionData = {
-            id: subscription.id,
-            customer_id: subscription.customer_id,
-            plan_id: subscription.plan_identifier || subscription.plan_id,
-            suspended: subscription.suspended || false,
-            expires_at: parseIuguDate(subscription.expires_at),
-            created_at_iugu: parseIuguDate(subscription.created_at),
-            updated_at_iugu: parseIuguDate(subscription.updated_at),
-            raw_json: subscription,
-          };
-
-          await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_subscriptions`, {
-            method: 'POST',
-            headers: supabaseHeaders,
-            body: JSON.stringify(subscriptionData),
-          });
-
+          await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'subscriptions', subscription);
           totalSynced++;
         } catch (error) {
           if (
@@ -278,24 +245,7 @@ async function syncPaymentMethods() {
 
     for (const method of response.items) {
       try {
-        const methodData = {
-          id: method.id,
-          customer_id: method.customer_id,
-          description: method.description,
-          item_type: method.item_type,
-          brand: method.brand,
-          last_four_digits: method.last_four_digits,
-          created_at_iugu: parseIuguDate(method.created_at),
-          updated_at_iugu: parseIuguDate(method.updated_at),
-          raw_json: method,
-        };
-
-        await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_payment_methods`, {
-          method: 'POST',
-          headers: supabaseHeaders,
-          body: JSON.stringify(methodData),
-        });
-
+        await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'payment_methods', method);
         syncedCount++;
       } catch (error) {
         if (!error.message.includes('duplicate key')) {
@@ -331,22 +281,7 @@ async function syncChargebacks() {
 
     for (const chargeback of response.items) {
       try {
-        // APENAS colunas básicas
-        const chargebackData = {
-          id: chargeback.id,
-          invoice_id: chargeback.invoice_id,
-          status: chargeback.status,
-          created_at_iugu: parseIuguDate(chargeback.created_at),
-          updated_at_iugu: parseIuguDate(chargeback.updated_at),
-          raw_json: chargeback,
-        };
-
-        await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_chargebacks`, {
-          method: 'POST',
-          headers: supabaseHeaders,
-          body: JSON.stringify(chargebackData),
-        });
-
+        await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'chargebacks', chargeback);
         syncedCount++;
       } catch (error) {
         if (!error.message.includes('duplicate key')) {
@@ -382,21 +317,7 @@ async function syncTransfers() {
 
     for (const transfer of response.items) {
       try {
-        // APENAS colunas básicas
-        const transferData = {
-          id: transfer.id,
-          status: transfer.status,
-          created_at_iugu: parseIuguDate(transfer.created_at),
-          updated_at_iugu: parseIuguDate(transfer.updated_at),
-          raw_json: transfer,
-        };
-
-        await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_transfers`, {
-          method: 'POST',
-          headers: supabaseHeaders,
-          body: JSON.stringify(transferData),
-        });
-
+        await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'transfers', transfer);
         syncedCount++;
       } catch (error) {
         if (!error.message.includes('duplicate key')) {
