@@ -3,12 +3,14 @@
 const https = require('https');
 const fs = require('fs');
 const { upsertViaRpc } = require('./lib/upsert_rpc');
+const { sendEmail, generateReportHTML, generateReportText } = require('./lib/email_sender');
 
 // Configurações
 const IUGU_API_TOKEN = process.env.IUGU_API_TOKEN;
 const IUGU_API_BASE_URL = process.env.IUGU_API_BASE_URL || 'https://api.iugu.com/v1';
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const EMAIL_TO = process.env.EMAIL_TO || 'bianca@freelaw.work';
 
 if (!IUGU_API_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error('❌ Missing required environment variables');
@@ -241,6 +243,8 @@ async function performHourlySync() {
   logWithTimestamp('🔄 STARTING HOURLY SYNC');
   logWithTimestamp('=====================');
 
+  const startTime = Date.now();
+
   try {
     // Carregar último checkpoint
     const checkpoint = await getLastSyncTime();
@@ -284,11 +288,28 @@ async function performHourlySync() {
 
     await saveCheckpoint(newCheckpoint);
 
+    const duration = (Date.now() - startTime) / 1000;
+
     logWithTimestamp('✅ SYNC COMPLETED SUCCESSFULLY');
     logWithTimestamp(
       `📈 Inserted: ${insertedInvoices} invoices, ${insertedCustomers} customers, ${insertedSubscriptions} subscriptions`
     );
     logWithTimestamp(`📊 Total synced: ${newCheckpoint.totalSynced} records`);
+
+    // Enviar e-mail com resultados
+    await sendSyncEmail({
+      success: true,
+      results: {
+        invoices: insertedInvoices,
+        customers: insertedCustomers,
+        subscriptions: insertedSubscriptions,
+        plans: 0,
+        chargebacks: 0,
+        transfers: 0,
+        payment_methods: 0,
+      },
+      duration,
+    });
 
     return {
       success: true,
@@ -297,10 +318,113 @@ async function performHourlySync() {
         customers: insertedCustomers,
         subscriptions: insertedSubscriptions,
       },
+      duration,
     };
   } catch (err) {
     logWithTimestamp(`❌ Sync failed: ${err.message}`);
-    return { success: false, error: err.message };
+
+    const duration = (Date.now() - startTime) / 1000;
+
+    // Enviar e-mail de erro
+    await sendSyncEmail({
+      success: false,
+      error: err.message,
+      duration,
+    });
+
+    return { success: false, error: err.message, duration };
+  }
+}
+
+async function sendSyncEmail({ success, results, error, duration }) {
+  try {
+    if (success) {
+      const subject = `✅ Sincronização Iugu concluída - ${new Date().toLocaleString('pt-BR')}`;
+      const html = generateReportHTML(results, { duration, hasErrors: false });
+      const text = generateReportText(results, { duration, hasErrors: false });
+
+      await sendEmail({ to: EMAIL_TO, subject, html, text });
+    } else {
+      const subject = `❌ Erro na sincronização Iugu - ${new Date().toLocaleString('pt-BR')}`;
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 10px 10px 0 0;
+      text-align: center;
+    }
+    .content {
+      background: #f9fafb;
+      padding: 30px;
+      border-radius: 0 0 10px 10px;
+    }
+    .error-box {
+      background: #fee2e2;
+      border: 2px solid #dc2626;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .error-title {
+      font-weight: bold;
+      color: #991b1b;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>❌ Erro na Sincronização Iugu</h1>
+    <div style="margin-top: 10px; font-size: 14px;">${new Date().toLocaleString('pt-BR')}</div>
+  </div>
+  <div class="content">
+    <div class="error-box">
+      <div class="error-title">Detalhes do Erro:</div>
+      <div>${error || 'Erro desconhecido'}</div>
+    </div>
+    <p><strong>Duração:</strong> ${duration.toFixed(2)}s</p>
+    <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+      Sistema de sincronização automática Iugu → Supabase<br>
+      FreeLaw
+    </p>
+  </div>
+</body>
+</html>
+      `.trim();
+
+      const text = `
+❌ ERRO NA SINCRONIZAÇÃO IUGU → SUPABASE
+${new Date().toLocaleString('pt-BR')}
+
+═══════════════════════════════════════════
+
+ERRO:
+${error || 'Erro desconhecido'}
+
+Duração: ${duration.toFixed(2)}s
+
+═══════════════════════════════════════════
+Sistema de sincronização automática
+      `.trim();
+
+      await sendEmail({ to: EMAIL_TO, subject, html, text });
+    }
+  } catch (emailError) {
+    logWithTimestamp(`⚠️ Failed to send email: ${emailError.message}`);
   }
 }
 
