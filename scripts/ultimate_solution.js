@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const https = require('https');
+const { upsertViaRpc } = require('./lib/upsert_rpc');
 
 // Configurações
 const IUGU_API_TOKEN =
@@ -144,23 +145,7 @@ async function ultimateSyncWithoutConstraints() {
 
       for (const subscription of response.items) {
         try {
-          // Dados básicos - SEM foreign keys
-          const subscriptionData = {
-            id: subscription.id,
-            customer_id: subscription.customer_id,
-            plan_id: subscription.plan_identifier || subscription.plan_id,
-            suspended: subscription.suspended || false,
-            expires_at: parseIuguDate(subscription.expires_at),
-            created_at_iugu: parseIuguDate(subscription.created_at),
-            updated_at_iugu: parseIuguDate(subscription.updated_at),
-            raw_json: subscription,
-          };
-
-          await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_subscriptions`, {
-            method: 'POST',
-            headers: supabaseHeaders,
-            body: JSON.stringify(subscriptionData),
-          });
+          await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'subscriptions', subscription);
 
           totalSynced++;
 
@@ -205,21 +190,7 @@ async function ultimateSyncWithoutConstraints() {
         let pmSynced = 0;
         for (const pm of paymentMethodsResponse.items) {
           try {
-            const pmData = {
-              id: pm.id,
-              customer_id: pm.customer_id,
-              description: pm.description,
-              item_type: pm.item_type,
-              created_at_iugu: parseIuguDate(pm.created_at),
-              updated_at_iugu: parseIuguDate(pm.updated_at),
-              raw_json: pm,
-            };
-
-            await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_payment_methods`, {
-              method: 'POST',
-              headers: supabaseHeaders,
-              body: JSON.stringify(pmData),
-            });
+            await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'payment_methods', pm);
 
             pmSynced++;
           } catch (error) {
