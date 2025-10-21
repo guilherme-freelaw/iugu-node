@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const https = require('https');
+const { upsertViaRpc } = require('./lib/upsert_rpc');
 
 // Configurações
 const IUGU_API_TOKEN =
@@ -140,22 +141,7 @@ async function syncAllCustomers() {
 
       for (const customer of response.items) {
         try {
-          const customerData = {
-            id: customer.id,
-            email: customer.email,
-            name: customer.name,
-            notes: customer.notes,
-            created_at_iugu: parseIuguDate(customer.created_at),
-            updated_at_iugu: parseIuguDate(customer.updated_at),
-            raw_json: customer,
-          };
-
-          await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_customers`, {
-            method: 'POST',
-            headers: supabaseHeaders,
-            body: JSON.stringify(customerData),
-          });
-
+          await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'customers', customer);
           totalSynced++;
         } catch (error) {
           if (!error.message.includes('duplicate key')) {
@@ -200,30 +186,17 @@ async function addMissingPlans() {
   for (const planIdentifier of missingPlans) {
     try {
       // Criar plano dummy baseado no identifier
-      const planData = {
+      const planPayload = {
         id: `DUMMY_${planIdentifier.toUpperCase()}`,
-        name: `Plano ${planIdentifier.replace('_', ' ').replace('plano', '').trim()}`,
         identifier: planIdentifier,
+        name: `Plano ${planIdentifier}`,
         interval: 1,
+        interval_type: 'months',
         value_cents: 0,
-        created_at_iugu: new Date().toISOString(),
-        updated_at_iugu: new Date().toISOString(),
-        raw_json: {
-          id: `DUMMY_${planIdentifier.toUpperCase()}`,
-          identifier: planIdentifier,
-          name: `Plano ${planIdentifier}`,
-          interval: 1,
-          interval_type: 'months',
-          value_cents: 0,
-          dummy: true,
-        },
+        dummy: true,
       };
 
-      await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_plans`, {
-        method: 'POST',
-        headers: supabaseHeaders,
-        body: JSON.stringify(planData),
-      });
+      await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'plans', planPayload);
 
       logWithTimestamp(`✅ Plano adicionado: ${planIdentifier}`);
       added++;
