@@ -2,6 +2,7 @@
 
 const https = require('https');
 const fs = require('fs');
+const { upsertViaRpc } = require('./lib/upsert_rpc');
 
 // Configurações
 const IUGU_API_TOKEN = process.env.IUGU_API_TOKEN;
@@ -192,41 +193,7 @@ async function upsertInvoices(invoices) {
 
   for (const invoice of invoices) {
     try {
-      // Preparar dados da fatura
-      const invoiceData = {
-        id: invoice.id,
-        account_id: invoice.account_id,
-        customer_id: invoice.customer_id,
-        subscription_id: invoice.subscription_id,
-        status: invoice.status,
-        due_date: parseIuguDate(invoice.due_date),
-        paid_at: parseIuguDate(invoice.paid_at),
-        payment_method: invoice.payment_method,
-        total_cents: invoice.total_cents || invoice.total * 100,
-        paid_cents: invoice.paid_cents || invoice.paid * 100,
-        discount_cents: invoice.discount_cents || invoice.discount * 100,
-        taxes_cents: invoice.taxes_cents || invoice.taxes * 100,
-        commission_cents: invoice.commission_cents,
-        external_reference: invoice.external_reference,
-        order_id: invoice.order_id,
-        created_at_iugu: parseIuguDate(invoice.created_at),
-        updated_at_iugu: parseIuguDate(invoice.updated_at),
-        payer_name: invoice.payer_name,
-        payer_email: invoice.payer_email,
-        payer_cpf_cnpj: invoice.payer_cpf_cnpj,
-        payer_phone: invoice.payer_phone,
-        secure_id: invoice.secure_id,
-        secure_url: invoice.secure_url,
-        raw_json: invoice,
-      };
-
-      // Inserir no Supabase
-      const response = await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_invoices`, {
-        method: 'POST',
-        headers: { ...supabaseHeaders, Prefer: 'resolution=merge-duplicates' },
-        body: JSON.stringify(invoiceData),
-      });
-
+      await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'invoices', invoice);
       inserted++;
     } catch (err) {
       logWithTimestamp(`⚠️  Error upserting invoice ${invoice.id}: ${err.message}`);
@@ -243,23 +210,7 @@ async function upsertCustomers(customers) {
 
   for (const customer of customers) {
     try {
-      const customerData = {
-        id: customer.id,
-        email: customer.email,
-        name: customer.name,
-        cpf_cnpj: customer.cpf_cnpj,
-        phone: customer.phone,
-        created_at_iugu: parseIuguDate(customer.created_at),
-        updated_at_iugu: parseIuguDate(customer.updated_at),
-        raw_json: customer,
-      };
-
-      await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_customers`, {
-        method: 'POST',
-        headers: { ...supabaseHeaders, Prefer: 'resolution=merge-duplicates' },
-        body: JSON.stringify(customerData),
-      });
-
+      await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'customers', customer);
       inserted++;
     } catch (err) {
       logWithTimestamp(`⚠️  Error upserting customer ${customer.id}: ${err.message}`);
@@ -276,24 +227,7 @@ async function upsertSubscriptions(subscriptions) {
 
   for (const subscription of subscriptions) {
     try {
-      const subscriptionData = {
-        id: subscription.id,
-        customer_id: subscription.customer_id,
-        plan_id: subscription.plan_id,
-        suspended: subscription.suspended || false,
-        active: subscription.active || false,
-        expires_at: parseIuguDate(subscription.expires_at),
-        created_at_iugu: parseIuguDate(subscription.created_at),
-        updated_at_iugu: parseIuguDate(subscription.updated_at),
-        raw_json: subscription,
-      };
-
-      await makeRequest(`${SUPABASE_URL}/rest/v1/iugu_subscriptions`, {
-        method: 'POST',
-        headers: { ...supabaseHeaders, Prefer: 'resolution=merge-duplicates' },
-        body: JSON.stringify(subscriptionData),
-      });
-
+      await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'subscriptions', subscription);
       inserted++;
     } catch (err) {
       logWithTimestamp(`⚠️  Error upserting subscription ${subscription.id}: ${err.message}`);
