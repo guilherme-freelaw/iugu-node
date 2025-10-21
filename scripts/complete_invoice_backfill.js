@@ -1,6 +1,8 @@
 // Complete invoice backfill - fetch ALL invoices from Iugu API systematically
 // Usage: IUGU_API_TOKEN=... SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/complete_invoice_backfill.js
 
+const { upsertViaRpc } = require('./lib/upsert_rpc');
+
 const IUGU_API_TOKEN = process.env.IUGU_API_TOKEN;
 const IUGU_API_BASE_URL = process.env.IUGU_API_BASE_URL || 'https://api.iugu.com/v1';
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -15,21 +17,6 @@ const iuguHeaders = {
   Authorization: `Basic ${Buffer.from(IUGU_API_TOKEN + ':').toString('base64')}`,
   'Content-Type': 'application/json',
 };
-
-const supabaseHeaders = {
-  apikey: SUPABASE_SERVICE_ROLE_KEY,
-  Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-  'Content-Type': 'application/json',
-};
-
-function parseDate(dateStr) {
-  if (!dateStr || dateStr === '') return null;
-  try {
-    return new Date(dateStr).toISOString();
-  } catch {
-    return null;
-  }
-}
 
 async function getTotalInvoices() {
   try {
@@ -71,68 +58,8 @@ async function fetchInvoiceBatch(startIndex, limit = 100) {
 async function insertInvoiceWithRetry(invoice, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const invoiceData = {
-        id: invoice.id,
-        account_id: invoice.account_id || null,
-        customer_id: invoice.customer_id || null,
-        subscription_id: invoice.subscription_id || null,
-        status: invoice.status || null,
-        due_date: invoice.due_date ? invoice.due_date : null,
-        paid_at: parseDate(invoice.paid_at),
-        payment_method: invoice.payment_method || null,
-        total_cents: invoice.total_cents || null,
-        paid_cents: invoice.paid_cents || invoice.total_paid_cents || null,
-        discount_cents: invoice.discount_cents || null,
-        taxes_cents: invoice.tax_cents || invoice.taxes_paid_cents || null,
-        external_reference: invoice.external_reference || null,
-        order_id: invoice.order_id || null,
-        created_at_iugu: parseDate(invoice.created_at_iso || invoice.created_at),
-        updated_at_iugu: parseDate(invoice.updated_at),
-        payer_name: invoice.payer_name || null,
-        payer_email: invoice.payer_email || invoice.email || null,
-        payer_cpf_cnpj: invoice.payer_cpf_cnpj || null,
-        payer_phone: invoice.payer_phone || null,
-        secure_id: invoice.secure_id || null,
-        secure_url: invoice.secure_url || null,
-        notification_url: invoice.notification_url || null,
-        return_url: invoice.return_url || null,
-        expired_url: invoice.expired_url || null,
-        financial_return_date: invoice.financial_return_date ? invoice.financial_return_date : null,
-        installments: invoice.installments || null,
-        credit_card_brand: invoice.credit_card_brand || null,
-        credit_card_last_4: invoice.credit_card_last_4 || null,
-        early_payment_discount: invoice.early_payment_discount || false,
-        commission_cents: invoice.commission_cents || null,
-        raw_json: invoice,
-      };
-
-      // Remove undefined values
-      Object.keys(invoiceData).forEach((key) => {
-        if (invoiceData[key] === undefined) {
-          delete invoiceData[key];
-        }
-      });
-
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/iugu_invoices`, {
-        method: 'POST',
-        headers: { ...supabaseHeaders, Prefer: 'resolution=merge-duplicates' },
-        body: JSON.stringify(invoiceData),
-      });
-
-      if (response.ok || response.status === 409) {
-        return { success: true, existed: response.status === 409 };
-      }
-
-      if (attempt === retries) {
-        const errorText = await response.text();
-        console.error(
-          `   💥 Final attempt failed for ${invoice.id}: ${response.status} - ${errorText.substring(0, 100)}`
-        );
-        return { success: false, error: `${response.status}: ${errorText.substring(0, 50)}` };
-      }
-
-      // Wait before retry
-      await new Promise((r) => setTimeout(r, 1000 * attempt));
+      await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'invoices', invoice);
+      return { success: true, existed: false };
     } catch (err) {
       if (attempt === retries) {
         console.error(`   💥 Exception on final attempt for ${invoice.id}:`, err.message);
@@ -151,34 +78,20 @@ async function insertCustomerIfNeeded(invoice) {
   if (!invoice.customer_id) return true;
 
   try {
-    const customer = {
+    // Create a synthetic customer payload that mimics Iugu's customer structure
+    const customerPayload = {
       id: invoice.customer_id,
       email: invoice.payer_email || invoice.email || 'unknown@example.com',
       name: invoice.payer_name || invoice.customer_name || 'Unknown Customer',
       cpf_cnpj: invoice.payer_cpf_cnpj || null,
       phone: invoice.payer_phone || null,
-      created_at_iugu: parseDate(invoice.created_at_iso || invoice.created_at),
-      updated_at_iugu: parseDate(invoice.updated_at),
-      raw_json: {
-        id: invoice.customer_id,
-        from_invoice: true,
-        source: 'complete_backfill',
-      },
+      created_at: invoice.created_at_iso || invoice.created_at,
+      updated_at: invoice.updated_at,
+      notes: 'Synthetic customer from invoice backfill',
     };
 
-    Object.keys(customer).forEach((key) => {
-      if (customer[key] === undefined) {
-        delete customer[key];
-      }
-    });
-
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/iugu_customers`, {
-      method: 'POST',
-      headers: { ...supabaseHeaders, Prefer: 'resolution=merge-duplicates' },
-      body: JSON.stringify(customer),
-    });
-
-    return response.ok || response.status === 409;
+    await upsertViaRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'customers', customerPayload);
+    return true;
   } catch (err) {
     console.warn(`   ⚠️  Customer insert failed for ${invoice.customer_id}:`, err.message);
     return false;
